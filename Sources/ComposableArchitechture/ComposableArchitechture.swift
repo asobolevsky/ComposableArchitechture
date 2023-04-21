@@ -57,18 +57,19 @@ public final class Store<State, Action>: ObservableObject {
         reducer(&state, action)
     }
 
-    public func view<LocalState>(
-        _ f: @escaping (State) -> LocalState
-    ) -> Store<LocalState, Action> {
-        let localStore = Store<LocalState, Action>(
-            initialState: f(state),
-            reducer: { localState, action in
-                self.send(action)
-                localState = f(self.state)
+    public func view<LocalState, LocalAction>(
+        state toLocalState: @escaping (State) -> LocalState,
+        action toGlobalAction: @escaping (LocalAction) -> Action
+    ) -> Store<LocalState, LocalAction> {
+        let localStore = Store<LocalState, LocalAction>(
+            initialState: toLocalState(state),
+            reducer: { localState, localAction in
+                self.send(toGlobalAction(localAction))
+                localState = toLocalState(self.state)
             }
         )
         localStore.cancellable = $state.sink { [weak localStore] newValue in
-            localStore?.state = f(newValue)
+            localStore?.state = toLocalState(newValue)
         }
         return localStore
     }
