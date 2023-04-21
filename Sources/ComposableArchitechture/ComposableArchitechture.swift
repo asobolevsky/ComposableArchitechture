@@ -1,7 +1,11 @@
 import Combine
 import SwiftUI
 
+// MARK: - Types
+
 public typealias StateReducer<State, Action> = (inout State, Action) -> Void
+
+// MARK: - Functions
 
 public func with<A, B>(_ a: A, _ f: (A) throws -> B) rethrows -> B {
     return try f(a)
@@ -36,6 +40,8 @@ public func pullback<LocalValue, GlobalValue, GlobalAction, LocalAction>(
         reducer(&globalValue[keyPath: value], localAction)
     }
 }
+
+// MARK: - Store
 
 public final class Store<State, Action>: ObservableObject {
     @Published public private(set) var state: State
