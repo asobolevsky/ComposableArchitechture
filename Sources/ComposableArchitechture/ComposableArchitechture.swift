@@ -38,7 +38,7 @@ public func pullback<LocalValue, GlobalValue, GlobalAction, LocalAction>(
 }
 
 public final class Store<State, Action>: ObservableObject {
-    @Published private(set) var state: State
+    @Published public private(set) var state: State
     private let reducer: StateReducer<State, Action>
 
     public init(initialState: State, reducer: @escaping StateReducer<State, Action>) {
