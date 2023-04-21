@@ -53,23 +53,23 @@ public final class Store<State, Action>: ObservableObject {
         self.reducer = reducer
     }
 
-    public func send(action: Action) {
+    public func send(_ action: Action) {
         reducer(&state, action)
     }
 
-    public func map<LocalState>(
+    public func view<LocalState>(
         _ f: @escaping (State) -> LocalState
     ) -> Store<LocalState, Action> {
         let localStore = Store<LocalState, Action>(
             initialState: f(state),
             reducer: { localState, action in
-                self.send(action: action)
+                self.send(action)
                 localState = f(self.state)
             }
         )
-//        localStore.cancellable = $state.sink { [weak localStore] newValue in
-//            localStore?.state = f(newValue)
-//        }
+        localStore.cancellable = $state.sink { [weak localStore] newValue in
+            localStore?.state = f(newValue)
+        }
         return localStore
     }
 }
