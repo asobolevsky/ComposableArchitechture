@@ -46,6 +46,7 @@ public func pullback<LocalValue, GlobalValue, GlobalAction, LocalAction>(
 public final class Store<State, Action>: ObservableObject {
     @Published public private(set) var state: State
     private let reducer: StateReducer<State, Action>
+    private var cancellable: AnyCancellable?
 
     public init(initialState: State, reducer: @escaping StateReducer<State, Action>) {
         self.state = initialState
@@ -55,11 +56,26 @@ public final class Store<State, Action>: ObservableObject {
     public func send(action: Action) {
         reducer(&state, action)
     }
+
+    public func map<LocalState>(
+        _ f: @escaping (State) -> LocalState
+    ) -> Store<LocalState, Action> {
+        let localStore = Store<LocalState, Action>(
+            initialState: f(state),
+            reducer: { localState, action in
+                self.send(action: action)
+                localState = f(self.state)
+            }
+        )
+//        localStore.cancellable = $state.sink { [weak localStore] newValue in
+//            localStore?.state = f(newValue)
+//        }
+        return localStore
+    }
 }
 
 public struct ComposableArchitechture {
     public private(set) var text = "Hello, World!"
 
-    public init() {
-    }
+    public init() { }
 }
