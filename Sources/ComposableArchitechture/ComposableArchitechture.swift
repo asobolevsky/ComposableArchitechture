@@ -3,7 +3,9 @@ import SwiftUI
 
 // MARK: - Types
 
-public typealias StateReducer<State, Action> = (inout State, Action) -> Void
+public typealias Effect = () -> Void
+
+public typealias Reducer<Value, Action> = (inout Value, Action) -> Effect
 
 // MARK: - Functions
 
@@ -21,23 +23,27 @@ public func compose<A, B, C>(
 }
 
 public func combine<Value, Action>(
-    _ reducers: (inout Value, Action) -> Void...
-) -> (inout Value, Action) -> Void {
+    _ reducers: Reducer<Value, Action>...
+) -> Reducer<Value, Action> {
     return { value, action in
-        for reducer in reducers {
-            reducer(&value, action)
+        let effects = reducers.map { $0(&value, action) }
+        return {
+            for effect in effects {
+                effect()
+            }
         }
     }
 }
 
 public func pullback<LocalValue, GlobalValue, GlobalAction, LocalAction>(
-    _ reducer: @escaping (inout LocalValue, LocalAction) -> Void,
+    _ reducer: @escaping Reducer<LocalValue, LocalAction>,
     value: WritableKeyPath<GlobalValue, LocalValue>,
     action: WritableKeyPath<GlobalAction, LocalAction?>
-) -> (inout GlobalValue, GlobalAction) -> Void {
+) -> Reducer<GlobalValue, GlobalAction> {
     return { globalValue, globalAction in
-        guard let localAction = globalAction[keyPath: action] else { return }
-        reducer(&globalValue[keyPath: value], localAction)
+        guard let localAction = globalAction[keyPath: action] else { return {} }
+        let effect = reducer(&globalValue[keyPath: value], localAction)
+        return effect
     }
 }
 
@@ -45,16 +51,17 @@ public func pullback<LocalValue, GlobalValue, GlobalAction, LocalAction>(
 
 public final class Store<State, Action>: ObservableObject {
     @Published public private(set) var state: State
-    private let reducer: StateReducer<State, Action>
+    private let reducer: Reducer<State, Action>
     private var cancellable: AnyCancellable?
 
-    public init(initialState: State, reducer: @escaping StateReducer<State, Action>) {
+    public init(initialState: State, reducer: @escaping Reducer<State, Action>) {
         self.state = initialState
         self.reducer = reducer
     }
 
     public func send(_ action: Action) {
-        reducer(&state, action)
+        let effect = reducer(&state, action)
+        effect()
     }
 
     public func view<LocalState, LocalAction>(
@@ -66,6 +73,7 @@ public final class Store<State, Action>: ObservableObject {
             reducer: { localState, localAction in
                 self.send(toGlobalAction(localAction))
                 localState = toLocalState(self.state)
+                return {}
             }
         )
         localStore.cancellable = $state.sink { [weak localStore] newValue in
