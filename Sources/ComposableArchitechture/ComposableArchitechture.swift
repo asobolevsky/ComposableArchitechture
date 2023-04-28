@@ -17,6 +17,16 @@ public struct Effect<A> {
     }
 }
 
+extension Effect {
+    func receive(on queue: DispatchQueue) -> Effect {
+        Effect { callback in
+            run { a in
+                queue.async { callback(a) }
+            }
+        }
+    }
+}
+
 public typealias Reducer<Value, Action> = (inout Value, Action) -> [Effect<Action>]
 
 // MARK: - Functions
