@@ -115,14 +115,20 @@ public final class Store<Value, Action>: ObservableObject {
     public func send(_ action: Action) {
         let effects = reducer(&value, action)
         effects.forEach { effect in
-            var effectCancellable: AnyCancellable!
+            var effectCancellable: AnyCancellable?
+            var didComplete = false
             effectCancellable = effect.sink(
                 receiveCompletion: { [weak self] _ in
-                    self?.effectCancellables.remove(effectCancellable)
+                    didComplete = true
+                    if let effectCancellable {
+                        self?.effectCancellables.remove(effectCancellable)
+                    }
                 },
                 receiveValue: send
             )
-            effectCancellables.insert(effectCancellable)
+            if !didComplete, let effectCancellable {
+                effectCancellables.insert(effectCancellable)
+            }
         }
     }
 
