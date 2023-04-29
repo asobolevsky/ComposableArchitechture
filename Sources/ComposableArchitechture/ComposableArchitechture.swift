@@ -3,17 +3,30 @@ import SwiftUI
 
 // MARK: - Types
 
-public typealias EffectRun<Action> = (@escaping (Action) -> Void) -> Void
+public struct Effect<Output>: Publisher {
+    public typealias Failure = Never
 
-public struct Effect<A> {
-    public let run: EffectRun<A>
+    let publisher: AnyPublisher<Output, Failure>
 
-    public init(run: @escaping EffectRun<A>) {
-        self.run = run
+    public func receive<S>(
+        subscriber: S
+    ) where S : Subscriber, Never == S.Failure, Output == S.Input {
+        publisher.receive(subscriber: subscriber)
     }
+}
 
-    public func map<B>(_ f: @escaping (A) -> B) -> Effect<B> {
-        Effect<B> { callback in self.run { a in callback(f(a)) } }
+extension Effect {
+    public static func fireAndForget(work: @escaping () -> Void) -> Effect {
+        Deferred { () -> Empty<Output, Never> in
+            work()
+            return Empty(completeImmediately: true)
+        }.eraseToEffect()
+    }
+}
+
+extension Publisher where Failure == Never {
+    public func eraseToEffect() -> Effect<Output> {
+        Effect(publisher: eraseToAnyPublisher())
     }
 }
 
@@ -51,13 +64,13 @@ public func pullback<LocalValue, GlobalValue, GlobalAction, LocalAction>(
         guard let localAction = globalAction[keyPath: action] else { return [] }
         let localEffects = reducer(&globalValue[keyPath: value], localAction)
         return localEffects.map { localEffect in
-            Effect { callback in
-                localEffect.run { localAction in
+            localEffect
+                .map { localAction -> GlobalAction in
                     var globalAction = globalAction
                     globalAction[keyPath: action] = localAction
-                    callback(globalAction)
+                    return globalAction
                 }
-            }
+                .eraseToEffect()
         }
     }
 }
@@ -69,12 +82,14 @@ public func logging<Value, Action>(
         let effects = reducer(&value, action)
         let newValue = value
 
-        return [Effect { _ in
-            print("Action: \(action)")
-            print("Value:")
-            dump(newValue)
-            print("---")
-        }] + effects
+        return [
+            .fireAndForget {
+                print("Action: \(action)")
+                print("Value:")
+                dump(newValue)
+                print("---")
+            }
+        ] + effects
     }
 }
 
@@ -83,7 +98,8 @@ public func logging<Value, Action>(
 public final class Store<Value, Action>: ObservableObject {
     @Published public private(set) var value: Value
     private let reducer: Reducer<Value, Action>
-    private var cancellable: AnyCancellable?
+    private var effectCancellables: Set<AnyCancellable> = []
+    private var viewCancellable: AnyCancellable?
 
     public init(initialValue: Value, reducer: @escaping Reducer<Value, Action>) {
         self.value = initialValue
@@ -92,7 +108,16 @@ public final class Store<Value, Action>: ObservableObject {
 
     public func send(_ action: Action) {
         let effects = reducer(&value, action)
-        effects.forEach { $0.run(send) }
+        effects.forEach { effect in
+            var effectCancellable: AnyCancellable!
+            effectCancellable = effect.sink(
+                receiveCompletion: { [weak self] _ in
+                    self?.effectCancellables.remove(effectCancellable)
+                },
+                receiveValue: send
+            )
+            effectCancellables.insert(effectCancellable)
+        }
     }
 
     public func view<LocalValue, LocalAction>(
@@ -107,7 +132,7 @@ public final class Store<Value, Action>: ObservableObject {
                 return []
             }
         )
-        localStore.cancellable = $value.sink { [weak localStore] newValue in
+        localStore.viewCancellable = $value.sink { [weak localStore] newValue in
             localStore?.value = toLocalValue(newValue)
         }
         return localStore
