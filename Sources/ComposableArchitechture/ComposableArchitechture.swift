@@ -30,9 +30,15 @@ extension Effect {
     }
 }
 
-extension Publisher where Failure == Never {
-    public func eraseToEffect() -> Effect<Output> {
+public extension Publisher where Failure == Never {
+    func eraseToEffect() -> Effect<Output> {
         Effect(publisher: eraseToAnyPublisher())
+    }
+}
+
+public extension Publisher where Output == Never, Failure == Never {
+    func fireAndForget<A>() -> Effect<A> {
+        map(absurd).eraseToEffect()
     }
 }
 
