@@ -81,6 +81,8 @@ public func pullback<LocalValue, GlobalValue, GlobalAction, LocalAction>(
     }
 }
 
+func absurd<A>(_ never: Never) -> A {}
+
 public func logging<Value, Action>(
     _ reducer: @escaping Reducer<Value, Action>
 ) -> Reducer<Value, Action> {
