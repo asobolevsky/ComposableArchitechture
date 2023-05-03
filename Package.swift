@@ -25,6 +25,9 @@ let package = Package(
         .target(
             name: "ComposableArchitechture",
             dependencies: []),
+        .target(
+            name: "ComposableArchitechtureTestUtils",
+            dependencies: ["ComposableArchitechture"]),
         .testTarget(
             name: "ComposableArchitechtureTests",
             dependencies: ["ComposableArchitechture"]),
