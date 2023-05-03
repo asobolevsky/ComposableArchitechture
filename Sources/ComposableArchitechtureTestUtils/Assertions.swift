@@ -10,7 +10,7 @@ import Combine
 import ComposableArchitechture
 import XCTest
 
-func assert<Value: Equatable, Action: Equatable>(
+public func assert<Value: Equatable, Action: Equatable>(
     initialValue: Value,
     reducer: Reducer<Value, Action>,
     steps: [Step<Value, Action>],

@@ -7,14 +7,14 @@
 
 import Foundation
 
-struct Step<Value: Equatable, Action> {
-    let type: StepType
-    let action: Action
-    let update: (inout Value) -> Void
-    let file: StaticString
-    let line: UInt
+public struct Step<Value: Equatable, Action> {
+    public let type: StepType
+    public let action: Action
+    public let update: (inout Value) -> Void
+    public let file: StaticString
+    public let line: UInt
 
-    init(
+    public init(
         _ type: StepType,
         _ action: Action,
         _ update: @escaping (inout Value) -> Void,
@@ -28,7 +28,7 @@ struct Step<Value: Equatable, Action> {
         self.line = line
     }
 
-    enum StepType {
+    public enum StepType {
         case send
         case receive
     }
