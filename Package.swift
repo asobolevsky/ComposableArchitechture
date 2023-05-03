@@ -14,6 +14,9 @@ let package = Package(
         .library(
             name: "ComposableArchitechture",
             targets: ["ComposableArchitechture"]),
+        .library(
+            name: "ComposableArchitechtureTestUtils",
+            targets: ["ComposableArchitechtureTestUtils"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
