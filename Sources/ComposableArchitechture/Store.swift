@@ -10,17 +10,23 @@ import Combine
 
 public final class Store<Value, Action>: ObservableObject {
     @Published public private(set) var value: Value
-    private let reducer: Reducer<Value, Action>
+    private let environment: Any
+    private let reducer: Reducer<Value, Action, Any>
     private var effectCancellables: Set<AnyCancellable> = []
     private var viewCancellable: AnyCancellable?
 
-    public init(initialValue: Value, reducer: @escaping Reducer<Value, Action>) {
+    public init<Environment>(
+        initialValue: Value,
+        environment: Environment,
+        reducer: @escaping Reducer<Value, Action, Environment>
+    ) {
         self.value = initialValue
-        self.reducer = reducer
+        self.environment = environment
+        self.reducer = { value, action, environment in reducer(&value, action, environment as! Environment) }
     }
 
     public func send(_ action: Action) {
-        let effects = reducer(&value, action)
+        let effects = reducer(&value, action, environment)
         effects.forEach { effect in
             var effectCancellable: AnyCancellable?
             var didComplete = false
@@ -45,7 +51,8 @@ public final class Store<Value, Action>: ObservableObject {
     ) -> Store<LocalValue, LocalAction> {
         let localStore = Store<LocalValue, LocalAction>(
             initialValue: toLocalValue(value),
-            reducer: { localValue, localAction in
+            environment: environment,
+            reducer: { localValue, localAction, localEnvironmenr in
                 self.send(toGlobalAction(localAction))
                 localValue = toLocalValue(self.value)
                 return []
