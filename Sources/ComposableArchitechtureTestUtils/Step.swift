@@ -17,15 +17,15 @@ public struct Step<Value: Equatable, Action> {
     public init(
         _ type: StepType,
         _ action: Action,
-        _ update: @escaping (inout Value) -> Void,
         file: StaticString = #file,
-        line: UInt = #line
+        line: UInt = #line,
+        _ update: @escaping (inout Value) -> Void = { _ in }
     ) {
         self.type = type
         self.action = action
-        self.update = update
         self.file = file
         self.line = line
+        self.update = update
     }
 
     public enum StepType {
