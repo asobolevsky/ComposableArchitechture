@@ -31,13 +31,13 @@ public final class Store<Value, Action>: ObservableObject {
             var effectCancellable: AnyCancellable?
             var didComplete = false
             effectCancellable = effect.sink(
-                receiveCompletion: { [weak self] _ in
+                receiveCompletion: { [weak self, weak effectCancellable] _ in
                     didComplete = true
                     if let effectCancellable {
                         self?.effectCancellables.remove(effectCancellable)
                     }
                 },
-                receiveValue: send
+                receiveValue: { [weak self] in self?.send($0) }
             )
             if !didComplete, let effectCancellable {
                 effectCancellables.insert(effectCancellable)
@@ -45,7 +45,7 @@ public final class Store<Value, Action>: ObservableObject {
         }
     }
 
-    public func view<LocalValue, LocalAction>(
+    public func view<LocalValue: Equatable, LocalAction>(
         value toLocalValue: @escaping (Value) -> LocalValue,
         action toGlobalAction: @escaping (LocalAction) -> Action
     ) -> Store<LocalValue, LocalAction> {
@@ -58,9 +58,12 @@ public final class Store<Value, Action>: ObservableObject {
                 return []
             }
         )
-        localStore.viewCancellable = $value.sink { [weak localStore] newValue in
-            localStore?.value = toLocalValue(newValue)
-        }
+        localStore.viewCancellable = $value
+            .map(toLocalValue)
+            .removeDuplicates()
+            .sink { [weak localStore] newValue in
+                localStore?.value = newValue
+            }
         return localStore
     }
 }
