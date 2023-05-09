@@ -45,7 +45,7 @@ public final class Store<Value, Action> {
         }
     }
 
-    public func scope<LocalValue: Equatable, LocalAction>(
+    public func scope<LocalValue, LocalAction>(
         value toLocalValue: @escaping (Value) -> LocalValue,
         action toGlobalAction: @escaping (LocalAction) -> Action
     ) -> Store<LocalValue, LocalAction> {
