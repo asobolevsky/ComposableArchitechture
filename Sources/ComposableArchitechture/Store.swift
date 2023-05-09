@@ -5,11 +5,11 @@
 //  Created by Aleksei Sobolevskii on 2023-05-03.
 //
 
-import Foundation
 import Combine
+import Foundation
 
-public final class Store<Value, Action>: ObservableObject {
-    @Published public private(set) var value: Value
+public final class Store<Value, Action> {
+    @Published fileprivate var value: Value
     private let environment: Any
     private let reducer: Reducer<Value, Action, Any>
     private var effectCancellables: Set<AnyCancellable> = []
@@ -45,7 +45,7 @@ public final class Store<Value, Action>: ObservableObject {
         }
     }
 
-    public func view<LocalValue: Equatable, LocalAction>(
+    public func scope<LocalValue: Equatable, LocalAction>(
         value toLocalValue: @escaping (Value) -> LocalValue,
         action toGlobalAction: @escaping (LocalAction) -> Action
     ) -> Store<LocalValue, LocalAction> {
@@ -60,10 +60,40 @@ public final class Store<Value, Action>: ObservableObject {
         )
         localStore.viewCancellable = $value
             .map(toLocalValue)
-            .removeDuplicates()
             .sink { [weak localStore] newValue in
                 localStore?.value = newValue
             }
         return localStore
+    }
+}
+
+// MARK: - ViewStore
+
+public final class ViewStore<Value>: ObservableObject {
+    @Published public fileprivate(set) var value: Value
+    fileprivate var cancellable: Cancellable?
+
+    public init(initialValue value: Value) {
+        self.value = value
+    }
+}
+
+extension Store where Value: Equatable {
+    var view: ViewStore<Value> {
+        view(removeDuplciates: ==)
+    }
+}
+
+extension Store {
+    func view(removeDuplciates predicate: @escaping (Value, Value) -> Bool) -> ViewStore<Value> {
+        let viewStore = ViewStore(initialValue: value)
+
+        viewStore.cancellable = $value
+            .removeDuplicates(by: predicate)
+            .sink(receiveValue: { [weak viewStore] value in
+                viewStore?.value = value
+            })
+
+        return viewStore
     }
 }
