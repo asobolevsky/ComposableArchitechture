@@ -78,13 +78,13 @@ public final class ViewStore<Value>: ObservableObject {
     }
 }
 
-extension Store where Value: Equatable {
+public extension Store where Value: Equatable {
     var view: ViewStore<Value> {
         view(removeDuplciates: ==)
     }
 }
 
-extension Store {
+public extension Store {
     func view(removeDuplciates predicate: @escaping (Value, Value) -> Bool) -> ViewStore<Value> {
         let viewStore = ViewStore(initialValue: value)
 
