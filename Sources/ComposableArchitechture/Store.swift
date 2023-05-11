@@ -10,19 +10,19 @@ import Foundation
 
 public final class Store<Value, Action> {
     @Published fileprivate var value: Value
-    private let environment: Any
     private let reducer: Reducer<Value, Action, Any>
+    private let environment: Any
     private var effectCancellables: Set<AnyCancellable> = []
     private var viewCancellable: AnyCancellable?
 
     public init<Environment>(
         initialValue: Value,
-        environment: Environment,
-        reducer: @escaping Reducer<Value, Action, Environment>
+        reducer: @escaping Reducer<Value, Action, Environment>,
+        environment: Environment
     ) {
         self.value = initialValue
-        self.environment = environment
         self.reducer = { value, action, environment in reducer(&value, action, environment as! Environment) }
+        self.environment = environment
     }
 
     private func send(_ action: Action) {
@@ -51,12 +51,12 @@ public final class Store<Value, Action> {
     ) -> Store<LocalValue, LocalAction> {
         let localStore = Store<LocalValue, LocalAction>(
             initialValue: toLocalValue(value),
-            environment: environment,
             reducer: { localValue, localAction, localEnvironmenr in
                 self.send(toGlobalAction(localAction))
                 localValue = toLocalValue(self.value)
                 return []
-            }
+            },
+            environment: environment
         )
         localStore.viewCancellable = $value
             .map(toLocalValue)
