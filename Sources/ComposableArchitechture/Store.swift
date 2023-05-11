@@ -17,11 +17,11 @@ public final class Store<Value, Action> {
 
     public init<Environment>(
         initialValue: Value,
-        reducer: @escaping Reducer<Value, Action, Environment>,
+        reducer: Reducer<Value, Action, Environment>,
         environment: Environment
     ) {
         self.value = initialValue
-        self.reducer = { value, action, environment in reducer(&value, action, environment as! Environment) }
+        self.reducer = .init { value, action, environment in reducer(&value, action, environment as! Environment) }
         self.environment = environment
     }
 
@@ -51,7 +51,7 @@ public final class Store<Value, Action> {
     ) -> Store<LocalValue, LocalAction> {
         let localStore = Store<LocalValue, LocalAction>(
             initialValue: toLocalValue(value),
-            reducer: { localValue, localAction, localEnvironmenr in
+            reducer: .init { localValue, localAction, localEnvironmenr in
                 self.send(toGlobalAction(localAction))
                 localValue = toLocalValue(self.value)
                 return []
