@@ -25,7 +25,7 @@ public final class Store<Value, Action> {
         self.reducer = { value, action, environment in reducer(&value, action, environment as! Environment) }
     }
 
-    public func send(_ action: Action) {
+    private func send(_ action: Action) {
         let effects = reducer(&value, action, environment)
         effects.forEach { effect in
             var effectCancellable: AnyCancellable?
@@ -69,31 +69,38 @@ public final class Store<Value, Action> {
 
 // MARK: - ViewStore
 
-public final class ViewStore<Value>: ObservableObject {
+public final class ViewStore<Value, Action>: ObservableObject {
     @Published public fileprivate(set) var value: Value
+    public let send: (Action) -> Void
+
     fileprivate var cancellable: Cancellable?
 
-    public init(initialValue value: Value) {
+    public init(initialValue value: Value, send: @escaping (Action) -> Void) {
         self.value = value
+        self.send = send
     }
 }
 
 public extension Store where Value: Equatable {
-    var view: ViewStore<Value> {
+    var view: ViewStore<Value, Action> {
         view(removeDuplciates: ==)
     }
 }
 
 public extension Store {
-    func view(removeDuplciates predicate: @escaping (Value, Value) -> Bool) -> ViewStore<Value> {
-        let viewStore = ViewStore(initialValue: value)
+    func view(removeDuplciates predicate: @escaping (Value, Value) -> Bool) -> ViewStore<Value, Action> {
+        let viewStore = ViewStore(
+            initialValue: value,
+            send: self.send
+        )
 
         viewStore.cancellable = $value
             .removeDuplicates(by: predicate)
-            .sink(receiveValue: { [weak viewStore] value in
-                viewStore?.value = value
-                self
-            })
+            .sink(
+                receiveValue: { [weak viewStore] value in
+                    viewStore?.value = value
+                }
+            )
 
         return viewStore
     }
