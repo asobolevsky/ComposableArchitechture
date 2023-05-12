@@ -9,9 +9,9 @@ import Foundation
 import CasePaths
 
 public struct Reducer<Value, Action, Environment> {
-    let reducer: (inout Value, Action, Environment) -> [Effect<Action>]
+    fileprivate let reducer: (inout Value, Action, Environment) -> [Effect<Action>]
 
-    init(_ reducer: @escaping (inout Value, Action, Environment) -> [Effect<Action>]) {
+    public init(_ reducer: @escaping (inout Value, Action, Environment) -> [Effect<Action>]) {
         self.reducer = reducer
     }
 }
