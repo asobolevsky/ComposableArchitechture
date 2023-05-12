@@ -87,13 +87,22 @@ public final class ViewStore<Value, Action>: ObservableObject {
     }
 
     public func binding<LocalValue>(
-//        get keyPath: KeyPath<Value, LocalValue>,
         get: @escaping (Value) -> LocalValue,
         send action: Action
     ) -> Binding<LocalValue> {
         Binding(
             get: { get(self.value) },
             set: { _ in self.send(action) }
+        )
+    }
+
+    public func binding<LocalValue>(
+        get: @escaping (Value) -> LocalValue,
+        send toAction: @escaping (LocalValue) -> Action
+    ) -> Binding<LocalValue> {
+        Binding(
+            get: { get(self.value) },
+            set: { self.send(toAction($0)) }
         )
     }
 }
