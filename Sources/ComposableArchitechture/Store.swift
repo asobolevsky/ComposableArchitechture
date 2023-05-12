@@ -69,6 +69,7 @@ public final class Store<Value, Action> {
 
 // MARK: - ViewStore
 
+@dynamicMemberLookup
 public final class ViewStore<Value, Action>: ObservableObject {
     @Published public fileprivate(set) var value: Value
     public let send: (Action) -> Void
@@ -78,6 +79,10 @@ public final class ViewStore<Value, Action>: ObservableObject {
     public init(initialValue value: Value, send: @escaping (Action) -> Void) {
         self.value = value
         self.send = send
+    }
+
+    public subscript<LocalValue>(dynamicMember keyPath: KeyPath<Value, LocalValue>) -> LocalValue {
+        value[keyPath: keyPath]
     }
 }
 
