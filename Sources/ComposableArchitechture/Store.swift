@@ -7,6 +7,7 @@
 
 import Combine
 import Foundation
+import SwiftUI
 
 public final class Store<Value, Action> {
     @Published fileprivate var value: Value
@@ -83,6 +84,17 @@ public final class ViewStore<Value, Action>: ObservableObject {
 
     public subscript<LocalValue>(dynamicMember keyPath: KeyPath<Value, LocalValue>) -> LocalValue {
         value[keyPath: keyPath]
+    }
+
+    public func binding<LocalValue>(
+//        get keyPath: KeyPath<Value, LocalValue>,
+        get: @escaping (Value) -> LocalValue,
+        send action: Action
+    ) -> Binding<LocalValue> {
+        Binding(
+            get: { get(self.value) },
+            set: { _ in self.send(action) }
+        )
     }
 }
 
